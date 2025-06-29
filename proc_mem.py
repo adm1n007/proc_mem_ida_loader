@@ -1,5 +1,5 @@
 import re, subprocess, idaapi, ida_segment, ida_kernwin, os, ida_netnode
-import ida_loader
+import ida_loader, ida_ida
 
 # To install this, simply put it in your ida_install/loaders folder and open
 # a `/proc/<pid>/mem` file!
@@ -36,7 +36,7 @@ def get_file_base(filename):
 # Check if the file is supported by our loader
 def accept_file(li, filename):
     # Check if the filename is /proc/<pid>/mem, if so, we can handle it!
-    mch = re.match("/proc/(\d+)/mem", filename)
+    mch = re.match(r"/proc/(\d+)/mem", filename)
     if not mch:
         return 0
 
@@ -47,7 +47,7 @@ def accept_file(li, filename):
 def load_file(li, neflags, fmt):
 
     # Get the PID from the format
-    pid = int(re.match("^/proc/(\d+)/mem dump$", fmt).group(1))
+    pid = int(re.match(r"^/proc/(\d+)/mem dump$", fmt).group(1))
 
     # Ask the user about the bitness to use for segments
     bitness = ida_kernwin.ask_buttons(
@@ -59,7 +59,7 @@ def load_file(li, neflags, fmt):
     # Convert dialog selection to IDA's segment bitness values
     if bitness == 1:
         bitness = 2 # 64-bit
-        idaapi.get_inf_structure().lflags |= idaapi.LFLG_64BIT
+        ida_ida.inf_set_64bit()
     elif bitness == 0:
         bitness = 1 # 32-bit
 
@@ -73,7 +73,7 @@ def load_file(li, neflags, fmt):
         # Go through each line in the map
         for line in fd.readlines():
             # Parse the /proc/<pid>/maps line, super quality regex
-            mch = re.match("([0-9a-f]+)-([0-9a-f]+) ([r-])([w-])([x-])[ps] ([0-9a-f]+) [0-9a-f]+:[0-9a-f]+ \d+\s+(.*)", line)
+            mch = re.match(r"([0-9a-f]+)-([0-9a-f]+) ([r-])([w-])([x-])[ps] ([0-9a-f]+) [0-9a-f]+:[0-9a-f]+ \d+\s+(.*)", line)
             start  = int(mch.group(1), 16)
             end    = int(mch.group(2), 16)
             r      = mch.group(3) == "r"
